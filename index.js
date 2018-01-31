@@ -9,7 +9,7 @@ const twilio = require('twilio');
 const appEnv = cfenv.getAppEnv();
 
 const server = new Hapi.Server({
-  host: appEnv.bind,
+  host: '0.0.0.0',
   port: appEnv.port
 });
 
