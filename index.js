@@ -44,14 +44,46 @@ server
       method: 'POST',
       path: '/incoming-call',
       handler: req => {
-        console.log(req);
         const VoiceResponse = twilio.twiml.VoiceResponse;
+
+        const notNaughtyList = [];
 
         const callFrom = req.payload.From;
 
         const response = new VoiceResponse();
-        const dial = response.dial();
-        dial.number(process.env.hostNumber);
+        console.log(notNaughtyList.indexOf(callFrom));
+        if (notNaughtyList.indexOf(callFrom) >= 0) {
+          const dial = response.dial({ timeout: 600 }, process.env.hostNumber);
+        } else {
+          const dial = response.dial({
+            action: '/record-voicemail',
+            method: 'POST'
+          });
+          dial.number(process.env.redirectNumber);
+        }
+
+        return response.toString();
+      }
+    });
+    server.route({
+      method: 'POST',
+      path: '/record-voicemail',
+      handler: req => {
+        const VoiceResponse = twilio.twiml.VoiceResponse;
+
+        const response = new VoiceResponse();
+
+        response.say(
+          'Please leave a message at the beep.\nPress the star key when finished.'
+        );
+        response.record({
+          action: 'http://foo.edu/handleRecording.php',
+          method: 'GET',
+          maxLength: 120,
+          finishOnKey: '*',
+          transcribe: true
+        });
+        response.say('I did not receive a recording');
 
         return response.toString();
       }
