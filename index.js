@@ -5,6 +5,7 @@ require('dotenv').load({ silent: true });
 const Hapi = require('hapi');
 const cfenv = require('cfenv');
 const twilio = require('twilio');
+const path = require('path');
 
 const appEnv = cfenv.getAppEnv();
 
@@ -34,10 +35,24 @@ const options = {
 
 server
   // Register the routes
-  .register({
-    plugin: require('good'),
-    options
-  })
+  .register([
+    {
+      plugin: require('good'),
+      options
+    },
+    {
+      plugin: require('schwifty'),
+      options: {
+        knex: require('knex')({
+          client: 'pg',
+          useNullAsDefault: true,
+          connection: `${process.env.DATABASE_URL}?ssl=true`
+        }),
+        migrationsDir: path.join(__dirname, 'migrations'),
+        migrateOnStart: true
+      }
+    }
+  ])
   // Add the routes
   .then(() => {
     server.route({
@@ -49,7 +64,7 @@ server
     });
     server.route({
       method: 'POST',
-      path: '/incoming-call',
+      path: '/twilio/incoming-call',
       handler: req => {
         const VoiceResponse = twilio.twiml.VoiceResponse;
 
@@ -63,7 +78,7 @@ server
           const dial = response.dial({ timeout: 600 }, process.env.hostNumber);
         } else {
           const dial = response.dial({
-            action: '/record-voicemail',
+            action: '/twilio/record-voicemail',
             method: 'POST'
           });
           dial.number(process.env.redirectNumber);
@@ -74,7 +89,7 @@ server
     });
     server.route({
       method: 'POST',
-      path: '/record-voicemail',
+      path: '/twilio/record-voicemail',
       handler: req => {
         const VoiceResponse = twilio.twiml.VoiceResponse;
 
