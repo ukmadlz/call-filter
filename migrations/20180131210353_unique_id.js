@@ -1,4 +1,4 @@
-exports.up = function(knex) {
+exports.up = knex => {
   return knex.schema.raw(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`).raw(`
     -- Create a trigger function that takes no arguments.
     -- Trigger functions automatically have OLD, NEW records
@@ -50,3 +50,5 @@ exports.up = function(knex) {
     $$ language 'plpgsql';
     `);
 };
+
+exports.down = () => {};
