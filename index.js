@@ -41,6 +41,13 @@ server
   // Add the routes
   .then(() => {
     server.route({
+      method: 'GET',
+      path: '/',
+      handler: () => {
+        return {};
+      }
+    });
+    server.route({
       method: 'POST',
       path: '/incoming-call',
       handler: req => {
