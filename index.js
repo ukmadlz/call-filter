@@ -6,6 +6,8 @@ const Hapi = require('hapi');
 const cfenv = require('cfenv');
 const twilio = require('twilio');
 const path = require('path');
+const schwifty = require('schwifty');
+const joi = require('joi');
 
 const appEnv = cfenv.getAppEnv();
 
@@ -41,7 +43,7 @@ server
       options
     },
     {
-      plugin: require('schwifty'),
+      plugin: schwifty,
       options: {
         knex: require('knex')({
           client: 'pg',
@@ -53,6 +55,25 @@ server
       }
     }
   ])
+  // DB
+  .then(() => {
+    return server.schwifty(
+      class ContactList extends schwifty.Model {
+        static get tableName() {
+          return 'contact_list';
+        }
+
+        static get joiSchema() {
+          return joi.object({
+            id: joi.number(),
+            telephone: joi.number(),
+            name: joi.string(),
+            allowed: joi.bool()
+          });
+        }
+      }
+    );
+  })
   // Add the routes
   .then(() => {
     server.route({
@@ -66,25 +87,44 @@ server
       method: 'POST',
       path: '/twilio/incoming-call',
       handler: req => {
+        const { ContactList } = req.models();
+
         const VoiceResponse = twilio.twiml.VoiceResponse;
 
         const notNaughtyList = [];
 
-        const callFrom = req.payload.From;
+        const callFrom = req.payload.From.replace(/[^0-9\.]+/g, '');
 
-        const response = new VoiceResponse();
-        console.log(notNaughtyList.indexOf(callFrom));
-        if (notNaughtyList.indexOf(callFrom) >= 0) {
-          const dial = response.dial({ timeout: 600 }, process.env.hostNumber);
-        } else {
-          const dial = response.dial({
-            action: '/twilio/record-voicemail',
-            method: 'POST'
+        return ContactList.query()
+          .findOne({ telephone: callFrom })
+          .then(result => {
+            const response = new VoiceResponse();
+
+            if (result && result.allowed) {
+              const dial = response.dial(
+                { timeout: 600 },
+                process.env.hostNumber
+              );
+            } else {
+              if (!result) {
+                ContactList.query()
+                  .insert({
+                    telephone: callFrom,
+                    allowed: false
+                  })
+                  .then(result => {
+                    console.log('New number added for review', result);
+                  });
+              }
+              const dial = response.dial({
+                action: '/twilio/record-voicemail',
+                method: 'POST'
+              });
+              dial.number({ timeout: 20 }, process.env.redirectNumber);
+            }
+
+            return response.toString();
           });
-          dial.number(process.env.redirectNumber);
-        }
-
-        return response.toString();
       }
     });
     server.route({

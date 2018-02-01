@@ -4,7 +4,7 @@ exports.up = knex => {
       table.increments('index');
       table.string('id');
       table.timestamps(true, true);
-      table.integer('telephone').unique();
+      table.bigInteger('telephone').unique();
       table.string('name');
       table.boolean('allowed');
     })
