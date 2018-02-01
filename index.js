@@ -71,10 +71,26 @@ server
 
         static get joiSchema() {
           return joi.object({
-            id: joi.number(),
+            id: joi.string(),
             telephone: joi.number(),
             name: joi.string(),
             allowed: joi.bool()
+          });
+        }
+      }
+    );
+  })
+  .then(() => {
+    return server.schwifty(
+      class CallLog extends schwifty.Model {
+        static get tableName() {
+          return 'block_call_log';
+        }
+
+        static get joiSchema() {
+          return joi.object({
+            id: joi.string(),
+            telephone_id: joi.string()
           });
         }
       }
@@ -93,7 +109,7 @@ server
       method: 'POST',
       path: '/twilio/incoming-call',
       handler: req => {
-        const { ContactList } = req.models();
+        const { ContactList, CallLog } = req.models();
 
         const VoiceResponse = twilio.twiml.VoiceResponse;
 
@@ -120,8 +136,22 @@ server
                   })
                   .then(result => {
                     console.log('New number added for review', result);
+                    CallLog.query()
+                      .insert({
+                        telephone_id: result.id
+                      })
+                      .then(result => {
+                        console.log('Call logged for later reference');
+                      });
                   });
               }
+              CallLog.query()
+                .insert({
+                  telephone_id: result.id
+                })
+                .then(result => {
+                  console.log('Call logged for later reference');
+                });
               const dial = response.dial({
                 action: '/twilio/record-voicemail',
                 method: 'POST'
