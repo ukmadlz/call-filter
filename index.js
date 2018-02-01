@@ -35,6 +35,12 @@ const options = {
   }
 };
 
+const consoleError = error => {
+  console.log('------ Error ------');
+  console.log(error);
+  console.log('------ Error ------');
+};
+
 server
   // Register the routes
   .register([
@@ -124,6 +130,16 @@ server
             }
 
             return response.toString();
+          })
+          .catch(err => {
+            consoleError(err);
+            const response = new VoiceResponse();
+            const dial = response.dial({
+              action: '/twilio/record-voicemail',
+              method: 'POST'
+            });
+            dial.number({ timeout: 20 }, process.env.redirectNumber);
+            return response.toString();
           });
       }
     });
@@ -160,8 +176,4 @@ server
     console.info(`Server started at ${server.info.uri}`);
   })
   // Error
-  .catch(err => {
-    console.log('------ Error ------');
-    console.log(err);
-    console.log('------ Error ------');
-  });
+  .catch(err => consoleError);
