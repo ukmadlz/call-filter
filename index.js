@@ -189,8 +189,7 @@ server
           method: 'POST',
           action: '/twilio/recorded-voicemail',
           maxLength: 120,
-          finishOnKey: '*',
-          transcribe: true
+          finishOnKey: '*'
         });
         response.say('I did not receive a recording');
 
