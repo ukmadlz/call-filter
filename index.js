@@ -186,11 +186,24 @@ server
         );
         response.record({
           method: 'POST',
+          action: '/twilio/recorded-voicemai',
           maxLength: 120,
           finishOnKey: '*',
           transcribe: true
         });
         response.say('I did not receive a recording');
+
+        return response.toString();
+      }
+    });
+    server.route({
+      method: 'POST',
+      path: '/twilio/recorded-voicemail',
+      handler: req => {
+        const VoiceResponse = twilio.twiml.VoiceResponse;
+
+        const response = new VoiceResponse();
+        response.say('Message recorded. Thank you. Goodbye');
 
         return response.toString();
       }
