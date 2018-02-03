@@ -127,12 +127,13 @@ server
                 { timeout: 600 },
                 process.env.hostNumber
               );
+            } else if (result && !result.allowed) {
+              response.say('Goodbye');
             } else {
               if (!result) {
                 ContactList.query()
                   .insert({
-                    telephone: callFrom,
-                    allowed: false
+                    telephone: callFrom
                   })
                   .then(result => {
                     console.log('New number added for review', result);
@@ -186,7 +187,7 @@ server
         );
         response.record({
           method: 'POST',
-          action: '/twilio/recorded-voicemai',
+          action: '/twilio/recorded-voicemail',
           maxLength: 120,
           finishOnKey: '*',
           transcribe: true
