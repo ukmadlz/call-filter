@@ -35,10 +35,17 @@ const options = {
   }
 };
 
+const voicemailMode = process.env.VOICEMAIL_MODE || false;
+
 const consoleError = error => {
   console.log('------ Error ------');
   console.log(error);
   console.log('------ Error ------');
+};
+
+const voiceSettings = {
+  voice: 'woman',
+  language: 'en-gb'
 };
 
 server
@@ -111,6 +118,16 @@ server
       handler: req => {
         const { ContactList, CallLog } = req.models();
 
+        const logCall = telephone_id => {
+          return CallLog.query()
+            .insert({
+              telephone_id: telephone_id
+            })
+            .then(result => {
+              console.log('Call logged for later reference');
+            });
+        };
+
         const VoiceResponse = twilio.twiml.VoiceResponse;
 
         const notNaughtyList = [];
@@ -123,13 +140,28 @@ server
             const response = new VoiceResponse();
 
             if (result && result.allowed) {
-              const dial = response.dial(
-                { timeout: 600 },
-                process.env.hostNumber
-              );
+              console.log(`[${callFrom}] Allowed number`);
+              console.log(voicemailMode);
+              if (voicemailMode === true) {
+                console.log(`[${callFrom}] Voicemail mode`);
+                response.redirect(
+                  {
+                    method: 'POST'
+                  },
+                  '/twilio/record-voicemail'
+                );
+              } else {
+                console.log(`[${callFrom}] Dialling host`);
+                const dial = response.dial(
+                  { timeout: 600 },
+                  process.env.hostNumber
+                );
+              }
             } else if (result && result.allowed === false) {
-              response.say('Goodbye');
+              console.log(`[${callFrom}] Blocked number`);
+              response.say(voiceSettings, 'Goodbye');
             } else {
+              console.log(`[${callFrom}] Calling redirect user`);
               if (!result) {
                 ContactList.query()
                   .insert({
@@ -137,22 +169,10 @@ server
                   })
                   .then(result => {
                     console.log('New number added for review', result);
-                    CallLog.query()
-                      .insert({
-                        telephone_id: result.id
-                      })
-                      .then(result => {
-                        console.log('Call logged for later reference');
-                      });
+                    return logCall(result.id);
                   });
               }
-              CallLog.query()
-                .insert({
-                  telephone_id: result.id
-                })
-                .then(result => {
-                  console.log('Call logged for later reference');
-                });
+              logCall(result.id);
               const dial = response.dial({
                 action: '/twilio/record-voicemail',
                 method: 'POST'
@@ -183,6 +203,7 @@ server
         const response = new VoiceResponse();
 
         response.say(
+          voiceSettings,
           'Please leave a message at the beep.\nPress the star key when finished.'
         );
         response.record({
@@ -191,7 +212,7 @@ server
           maxLength: 120,
           finishOnKey: '*'
         });
-        response.say('I did not receive a recording');
+        response.say(voiceSettings, 'I did not receive a recording');
 
         return response.toString();
       }
@@ -203,7 +224,7 @@ server
         const VoiceResponse = twilio.twiml.VoiceResponse;
 
         const response = new VoiceResponse();
-        response.say('Message recorded. Thank you. Goodbye');
+        response.say(voiceSettings, 'Message recorded. Thank you. Goodbye');
 
         return response.toString();
       }
