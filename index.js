@@ -127,7 +127,7 @@ server
                 { timeout: 600 },
                 process.env.hostNumber
               );
-            } else if (result && !result.allowed) {
+            } else if (result && result.allowed === false) {
               response.say('Goodbye');
             } else {
               if (!result) {
