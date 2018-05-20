@@ -141,7 +141,6 @@ server
 
             if (result && result.allowed) {
               console.log(`[${callFrom}] Allowed number`);
-              console.log(voicemailMode);
               if (voicemailMode === true) {
                 console.log(`[${callFrom}] Voicemail mode`);
                 response.redirect(
