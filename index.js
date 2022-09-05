@@ -61,10 +61,10 @@ server
         knex: require('knex')({
           client: 'pg',
           useNullAsDefault: true,
-          connection: `${process.env.DATABASE_URL}?ssl=true`
+          connection: `${process.env.DATABASE_URL}`
         }),
         migrationsDir: path.join(__dirname, 'migrations'),
-        migrateOnStart: true
+        migrateOnStart: false
       }
     }
   ])
@@ -232,10 +232,10 @@ server
   // Start the server
   .then(() => {
     return server.start();
-  })
+  }) 
   // It's alive
-  .then(() => {
+  .then((data) => {
     console.info(`Server started at ${server.info.uri}`);
   })
   // Error
-  .catch(err => consoleError);
+  .catch(consoleError);
