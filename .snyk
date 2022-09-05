@@ -1,0 +1,41 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.0
+ignore: {}
+# patches apply the minimum changes required to fix a vulnerability
+patch:
+  'npm:extend:20180424':
+    - knex > liftoff > extend:
+        patched: '2022-09-05T20:41:24.026Z'
+    - twilio > request > extend:
+        patched: '2022-09-05T20:41:24.026Z'
+  'npm:hoek:20180212':
+    - good-console > hoek:
+        patched: '2022-09-05T20:41:24.026Z'
+    - good-squeeze > hoek:
+        patched: '2022-09-05T20:41:24.026Z'
+    - good-console > joi > hoek:
+        patched: '2022-09-05T20:41:24.026Z'
+    - good-http > wreck > hoek:
+        patched: '2022-09-05T20:41:24.026Z'
+    - schwifty > toys > hoek:
+        patched: '2022-09-05T20:41:24.026Z'
+    - good-console > joi > topo > hoek:
+        patched: '2022-09-05T20:41:24.026Z'
+    - good-http > wreck > boom > hoek:
+        patched: '2022-09-05T20:41:24.026Z'
+    - twilio > request > hawk > hoek:
+        patched: '2022-09-05T20:41:24.026Z'
+    - twilio > request > hawk > boom > hoek:
+        patched: '2022-09-05T20:41:24.026Z'
+    - twilio > request > hawk > sntp > hoek:
+        patched: '2022-09-05T20:41:24.026Z'
+    - twilio > request > hawk > cryptiles > boom > hoek:
+        patched: '2022-09-05T20:41:24.026Z'
+  SNYK-JS-LODASH-567746:
+    - knex > lodash:
+        patched: '2022-09-05T20:41:24.026Z'
+    - objection > lodash:
+        patched: '2022-09-05T20:41:24.026Z'
+  'npm:stringstream:20180511':
+    - twilio > request > stringstream:
+        patched: '2022-09-05T20:41:24.026Z'
