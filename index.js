@@ -1,13 +1,17 @@
 'use strict';
 
-require('dotenv').load({ silent: true });
+require('dotenv').config({ silent: true });
 
 const Hapi = require('hapi');
 const cfenv = require('cfenv');
+const knex = require('knex')({
+    client: 'pg',
+    connection: process.env.DATABASE_URL,
+});
 const twilio = require('twilio');
-const path = require('path');
-const schwifty = require('schwifty');
-const joi = require('joi');
+const debug = require('debug');
+
+const { contactList, callLog } = require('./models/database');
 
 const appEnv = cfenv.getAppEnv();
 
@@ -38,9 +42,7 @@ const options = {
 const voicemailMode = process.env.VOICEMAIL_MODE || false;
 
 const consoleError = error => {
-  console.log('------ Error ------');
-  console.log(error);
-  console.log('------ Error ------');
+  debug('app:error')(error);
 };
 
 const voiceSettings = {
@@ -54,54 +56,11 @@ server
     {
       plugin: require('good'),
       options
-    },
-    {
-      plugin: schwifty,
-      options: {
-        knex: require('knex')({
-          client: 'pg',
-          useNullAsDefault: true,
-          connection: `${process.env.DATABASE_URL}`
-        }),
-        migrationsDir: path.join(__dirname, 'migrations'),
-        migrateOnStart: false
-      }
     }
   ])
   // DB
   .then(() => {
-    return server.schwifty(
-      class ContactList extends schwifty.Model {
-        static get tableName() {
-          return 'contact_list';
-        }
-
-        static get joiSchema() {
-          return joi.object({
-            id: joi.string(),
-            telephone: joi.number(),
-            name: joi.string(),
-            allowed: joi.bool()
-          });
-        }
-      }
-    );
-  })
-  .then(() => {
-    return server.schwifty(
-      class CallLog extends schwifty.Model {
-        static get tableName() {
-          return 'block_call_log';
-        }
-
-        static get joiSchema() {
-          return joi.object({
-            id: joi.string(),
-            telephone_id: joi.string()
-          });
-        }
-      }
-    );
+    return knex.migrate.latest()
   })
   // Add the routes
   .then(() => {
@@ -116,7 +75,8 @@ server
       method: 'POST',
       path: '/twilio/incoming-call',
       handler: req => {
-        const { ContactList, CallLog } = req.models();
+        const ContactList = new contactList(knex);
+        const CallLog = new callLog(knex);
 
         const logCall = telephone_id => {
           return CallLog.query()
@@ -124,7 +84,7 @@ server
               telephone_id: telephone_id
             })
             .then(result => {
-              console.log('Call logged for later reference');
+              debug('app:log')('Call logged for later reference');
             });
         };
 
@@ -140,9 +100,9 @@ server
             const response = new VoiceResponse();
 
             if (result && result.allowed) {
-              console.log(`[${callFrom}] Allowed number`);
+              debug('app:log')(`[${callFrom}] Allowed number`);
               if (voicemailMode === true) {
-                console.log(`[${callFrom}] Voicemail mode`);
+                debug('app:log')(`[${callFrom}] Voicemail mode`);
                 response.redirect(
                   {
                     method: 'POST'
@@ -150,24 +110,24 @@ server
                   '/twilio/record-voicemail'
                 );
               } else {
-                console.log(`[${callFrom}] Dialling host`);
+                debug('app:log')(`[${callFrom}] Dialling host`);
                 const dial = response.dial(
                   { timeout: 600 },
-                  process.env.hostNumber
+                  process.env.HOST_NUMBER
                 );
               }
             } else if (result && result.allowed === false) {
-              console.log(`[${callFrom}] Blocked number`);
+              debug('app:log')(`[${callFrom}] Blocked number`);
               response.say(voiceSettings, 'Goodbye');
             } else {
-              console.log(`[${callFrom}] Calling redirect user`);
+              debug('app:log')(`[${callFrom}] Calling redirect user`);
               if (!result) {
                 ContactList.query()
                   .insert({
                     telephone: callFrom
                   })
                   .then(result => {
-                    console.log('New number added for review', result);
+                    debug('app:log')('New number added for review', result);
                     return logCall(result.id);
                   });
               }
@@ -176,7 +136,7 @@ server
                 action: '/twilio/record-voicemail',
                 method: 'POST'
               });
-              dial.number({ timeout: 20 }, process.env.redirectNumber);
+              dial.number({ timeout: 20 }, process.env.REDIRECT_NUMBER);
             }
 
             return response.toString();
@@ -188,7 +148,7 @@ server
               action: '/twilio/record-voicemail',
               method: 'POST'
             });
-            dial.number({ timeout: 20 }, process.env.redirectNumber);
+            dial.number({ timeout: 20 }, process.env.REDIRECT_NUMBER);
             return response.toString();
           });
       }
@@ -235,7 +195,7 @@ server
   }) 
   // It's alive
   .then((data) => {
-    console.info(`Server started at ${server.info.uri}`);
+    debug('app:info')(`Server started at ${server.info.uri}`);
   })
   // Error
   .catch(consoleError);
