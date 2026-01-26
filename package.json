@@ -10,7 +10,7 @@
   "author": "Mike Elsmore <mike@elsmore.me>",
   "license": "MIT",
   "dependencies": {
-    "cfenv": "^1.0.4",
+    "cfenv": "^1.2.5",
     "dotenv": "^5.0.0",
     "good": "^8.0.1",
     "good-console": "^7.0.1",
@@ -23,6 +23,6 @@
     "objection": "^0.9.4",
     "pg": "^7.4.1",
     "schwifty": "^3.0.0",
-    "twilio": "^3.11.2"
+    "twilio": "^3.16.0"
   }
 }
